@@ -2,6 +2,7 @@
 
 package com.example.savebucks_android.ui.theme
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +31,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType.Companion.Uri
+import androidx.core.text.HtmlCompat
 import com.example.savebucks_android.datamodel.PostUiModel
 import com.example.savebucks_android.viewmodel.PostViewModel
 import com.example.savebucks_android.viewmodel.PostsUiState
@@ -70,6 +74,12 @@ fun PostListScreen(
     onRefresh: () -> Unit,
     onRetry: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredPosts = uiState.posts.filter {
+        it.title.contains(searchQuery, ignoreCase = true)
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("SaveBucks") },
@@ -79,6 +89,18 @@ fun PostListScreen(
             )
         )
 
+        // ✅ Add Search Bar Here
+        TextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clip(RoundedCornerShape(24.dp)) // ✅ Only this makes it rounded
+        )
+
+
         if (uiState.error != null && uiState.posts.isEmpty()) {
             ErrorView(error = uiState.error, onRetry = onRetry)
         } else {
@@ -87,7 +109,7 @@ fun PostListScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(uiState.posts) { post ->
+                items(filteredPosts) { post ->
                     PostItem(post = post, onClick = { onPostClick(post) })
                 }
 
@@ -112,27 +134,19 @@ fun PostListScreen(
     }
 }
 
+
 @Composable
 fun PostItem(post: PostUiModel, onClick: () -> Unit) {
+    val context = LocalContext.current  // ✅ Move this to the top
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            if (post.imageUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = post.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
 
             Text(
                 text = post.title,
@@ -140,22 +154,17 @@ fun PostItem(post: PostUiModel, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = formatDate(post.date),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = HtmlCompat.fromHtml(post.excerpt, HtmlCompat.FROM_HTML_MODE_LEGACY).toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = post.excerpt,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
@@ -167,10 +176,9 @@ fun PostDetailScreen(post: PostUiModel, onBackPressed: () -> Unit) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Post Details") },
+            title = { Text(post.title) },
             navigationIcon = {
                 IconButton(onClick = onBackPressed) {
-                    // You'd normally use an icon here, but we'll use text for simplicity
                     Text("←", fontSize = 24.sp)
                 }
             },
@@ -187,6 +195,7 @@ fun PostDetailScreen(post: PostUiModel, onBackPressed: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            // Show image if available
             if (post.imageUrl.isNotEmpty()) {
                 AsyncImage(
                     model = post.imageUrl,
@@ -200,6 +209,7 @@ fun PostDetailScreen(post: PostUiModel, onBackPressed: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Deal Title
             Text(
                 text = post.title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -208,6 +218,7 @@ fun PostDetailScreen(post: PostUiModel, onBackPressed: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Deal Date
             Text(
                 text = formatDate(post.date),
                 style = MaterialTheme.typography.bodyMedium,
@@ -216,32 +227,25 @@ fun PostDetailScreen(post: PostUiModel, onBackPressed: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Display a button to open the full article in browser
+            // View Deal Button (opens deal page)
             Button(
                 onClick = { uriHandler.openUri(fullUrl) },
                 modifier = Modifier.align(CenterHorizontally)
             ) {
-                Text("Read Full Article")
+                Text("View Full Deal on Website")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Show excerpt as preview
+            // Full Deal Content
             Text(
-                text = "Preview:",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = post.excerpt,
+                text = HtmlCompat.fromHtml(post.excerpt, HtmlCompat.FROM_HTML_MODE_LEGACY).toString(),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
     }
 }
+
 
 @Composable
 fun ErrorView(error: String, onRetry: () -> Unit) {

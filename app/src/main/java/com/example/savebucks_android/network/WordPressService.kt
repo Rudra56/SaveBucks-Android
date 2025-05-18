@@ -11,8 +11,8 @@ import retrofit2.http.Query
 interface WordPressService {
     @GET("wp-json/wp/v2/posts")
     suspend fun getPosts(
-        @Query("per_page") perPage: Int = 20,
-        @Query("page") page: Int = 1
+        @Query("per_page") perPage: Int = 50,
+        @Query("page") page: Int = 2
     ): List<WordPressPost>
 }
 
