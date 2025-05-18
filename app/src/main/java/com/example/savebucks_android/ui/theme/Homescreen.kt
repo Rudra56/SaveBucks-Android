@@ -3,6 +3,7 @@
 package com.example.savebucks_android.ui.theme
 
 import android.content.Intent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,8 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType.Companion.Uri
 import androidx.core.text.HtmlCompat
+import coil.compose.rememberAsyncImagePainter
+import com.example.savebucks_android.R
 import com.example.savebucks_android.datamodel.PostUiModel
 import com.example.savebucks_android.viewmodel.PostViewModel
 import com.example.savebucks_android.viewmodel.PostsUiState
@@ -137,7 +141,11 @@ fun PostListScreen(
 
 @Composable
 fun PostItem(post: PostUiModel, onClick: () -> Unit) {
-    val context = LocalContext.current  // ✅ Move this to the top
+    val painter = if (post.imageUrl.isNotEmpty()) {
+        rememberAsyncImagePainter(post.imageUrl)
+    } else {
+        painterResource(id = R.drawable.baseline_shopping_basket_24)
+    }
 
     Card(
         modifier = Modifier
@@ -146,28 +154,46 @@ fun PostItem(post: PostUiModel, onClick: () -> Unit) {
             .padding(8.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-
-            Text(
-                text = post.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // ✅ Thumbnail on Left
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Text(
-                text = HtmlCompat.fromHtml(post.excerpt, HtmlCompat.FROM_HTML_MODE_LEGACY).toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Text Block on Right
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = post.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = post.excerpt,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
+
+
 
 @Composable
 fun PostDetailScreen(post: PostUiModel, onBackPressed: () -> Unit) {
@@ -324,4 +350,5 @@ fun formatDate(dateString: String): String {
     } catch (e: Exception) {
         dateString
     }
+
 }
